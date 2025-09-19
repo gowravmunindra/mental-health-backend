@@ -5,7 +5,9 @@ from textblob import TextBlob
 import os
 
 app = Flask(__name__)
-CORS(app)
+
+# ✅ Restrict CORS only to your frontend domain
+CORS(app, origins=["https://mental-health-frontend.vercel.app"])
 
 # Gemini API config (use environment variable on Vercel)
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -34,7 +36,7 @@ def analyze_sentiment(text):
     lower_text = text.lower()
     for word in custom_negative:
         if word in lower_text:
-            return -0.9  # force strong negative
+            return -0.9
     return TextBlob(text).sentiment.polarity
 
 def classify_sentiment(polarity):
