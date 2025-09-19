@@ -2,12 +2,13 @@ from flask import Flask, request, jsonify
 import requests
 from flask_cors import CORS
 from textblob import TextBlob
+import os
 
 app = Flask(__name__)
 CORS(app)
 
-# Gemini API config
-GEMINI_API_KEY = "49de4768f1msh7a09ab21d046638p1dc42fjsn2c40aec517d1"
+# Gemini API config (use environment variable on Vercel)
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GEMINI_API_URL = "https://gemini-pro-ai.p.rapidapi.com"
 HEADERS = {
     "Content-Type": "application/json",
@@ -17,45 +18,23 @@ HEADERS = {
 
 # Strongly negative words (custom lexicon)
 custom_negative = {
-    "die": -0.9,
-    "suicide": -1.0,
-    "kill": -0.9,
-    "murder": -0.9,
-    "self-harm": -1.0,
-    "cut": -0.8,
-    "hang": -0.9,
-    "worthless": -0.8,
-    "failure": -0.7,
-    "hopeless": -0.9,
-    "pointless": -0.8,
-    "useless": -0.8,
-    "meaningless": -0.8,
-    "depressed": -0.8,
-    "anxious": -0.6,
-    "lonely": -0.7,
-    "tired": -0.6,
-    "stressed": -0.6,
-    "broken": -0.7,
-    "hate": -0.9,
-    "anger": -0.8,
-    "rage": -0.9,
-    "cry": -0.7,
-    "sad": -0.8,
-    "grief": -0.9,
-    "pain": -0.9,
-    "suffer": -0.9,
+    "die": -0.9, "suicide": -1.0, "kill": -0.9, "murder": -0.9,
+    "self-harm": -1.0, "cut": -0.8, "hang": -0.9,
+    "worthless": -0.8, "failure": -0.7, "hopeless": -0.9,
+    "pointless": -0.8, "useless": -0.8, "meaningless": -0.8,
+    "depressed": -0.8, "anxious": -0.6, "lonely": -0.7,
+    "tired": -0.6, "stressed": -0.6, "broken": -0.7,
+    "hate": -0.9, "anger": -0.8, "rage": -0.9,
+    "cry": -0.7, "sad": -0.8, "grief": -0.9,
+    "pain": -0.9, "suffer": -0.9,
 }
 
 def analyze_sentiment(text):
     """Custom sentiment analysis with strong negative overrides."""
     lower_text = text.lower()
-
-    # Check custom strong negatives first
     for word in custom_negative:
         if word in lower_text:
             return -0.9  # force strong negative
-
-    # Otherwise use TextBlob polarity
     return TextBlob(text).sentiment.polarity
 
 def classify_sentiment(polarity):
@@ -66,8 +45,8 @@ def classify_sentiment(polarity):
         return "positive", "The user feels positive. Reply with an encouraging and uplifting message. User said: "
     elif polarity <= -0.1:
         return "negative", "The user feels negative. Reply with an empathetic and supportive message. User said: "
-    else:  # -0.1 to 0.1
-        return "neutral", "The user is in between positive and negative emotion. Help them reflect and choose a better option. User said: "
+    else:
+        return "neutral", "The user is in between. Help them reflect and choose a better option. User said: "
 
 @app.route("/chat", methods=["POST"])
 def chat():
@@ -92,8 +71,6 @@ def chat():
         response.raise_for_status()
         result = response.json()
 
-        print("Gemini raw response:", result)
-
         ai_message = (
             result.get("candidates", [{}])[0]
                   .get("content", {})
@@ -107,9 +84,6 @@ def chat():
         })
 
     except Exception as e:
-        print("Error from backend:", e)
         return jsonify({"error": str(e)}), 500
 
-if __name__ == "__main__":
-    print("✅ Backend is running on http://127.0.0.1:5000")
-    app.run(port=5000, debug=True)
+# ✅ Do NOT use app.run() in Vercel
